@@ -213,7 +213,7 @@ export default function Home() {
             initialSegments={generatedUniverse}
             onSegmentsGenerated={setGeneratedUniverse}
             propositions={generatedPropositions || []}
-            userInput={userInput}
+            userInput={userInput || undefined}
           />
         )}
       </div>
