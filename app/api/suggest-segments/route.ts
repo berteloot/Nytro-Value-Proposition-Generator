@@ -5,6 +5,9 @@ import { getWebsiteContent } from '@/lib/research';
 // Increase timeout for this route (60 seconds)
 export const maxDuration = 60;
 
+// Mark as dynamic to avoid static pre-rendering issues
+export const dynamic = 'force-dynamic';
+
 interface SuggestSegmentsRequest {
   productName: string;
   productDescription: string;
