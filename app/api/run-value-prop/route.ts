@@ -19,7 +19,6 @@ export async function POST(req: NextRequest) {
       description: body.description,
       targetDecisionMaker: body.targetDecisionMaker,
       websiteUrl: body.websiteUrl,
-      marketingAsset: body.marketingAsset,
       primarySegment: body.primarySegment,
       primaryJobId: body.primaryJobId,
       companyName: body.companyName,

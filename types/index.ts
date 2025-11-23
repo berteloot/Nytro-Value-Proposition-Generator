@@ -95,7 +95,8 @@ export interface UserInput {
   description: string;
   targetDecisionMaker: string;
   websiteUrl?: string;
-  marketingAsset?: unknown; // File object (browser) or file data (server) - using unknown to avoid build issues
+  // marketingAsset removed to avoid File type evaluation issues during build
+  // If file upload is needed, handle it separately in the API route
   primarySegment?: string; // Optional: user-selected primary segment
   primaryJobId?: string; // Optional: user-selected primary job
   productType?: 'product' | 'service' | 'both'; // Optional: product type for phrasing adaptation
