@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: nytro-value-prop-engine
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o
+      - key: HUBSPOT_API_KEY
+        sync: false
+        optional: true
+      - key: SENDGRID_API_KEY
+        sync: false
+        optional: true
+      - key: SENDGRID_FROM_EMAIL
+        sync: false
+        optional: true
+
