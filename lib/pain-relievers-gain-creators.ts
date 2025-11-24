@@ -36,6 +36,8 @@ PAIN RELIEVERS AND GAIN CREATORS (must explain HOW):
 - If a pain or gain cannot reasonably be influenced by the product, either:
   - omit it, or
   - mark it as low-confidence and explain why.
+- CRITICAL: Do NOT start descriptions with "Addresses:" or "Enables:" - these are labels, not part of the description text.
+- CRITICAL: Write complete, full sentences. Never truncate or cut off mid-sentence.
 
 FORMAT RULES:
 - Use concise, precise language. Avoid hype, clichés, and slogans.
@@ -48,8 +50,8 @@ Return JSON with:
   "painRelievers": [
     {
       "painId": "string",       // id of the pain this addresses
-      "title": "short label",
-      "description": "how the product relieves this pain in clear, concrete terms. IMPORTANT: Ensure descriptions are complete sentences that fully explain the mechanism. Do not truncate or cut off mid-sentence.",
+      "title": "short label (optional, do not include 'Addresses:' prefix)",
+      "description": "how the product relieves this pain in clear, concrete terms. Write a complete sentence explaining the mechanism. Do NOT start with 'Addresses:' - that is a label, not part of the description. Ensure the description is complete and never truncated.",
       "productsUsed": ["optional list of product/service names"],
       "confidence": "high | medium | low",
       "evidenceSource": "user_input | website | research | inferred"
@@ -58,8 +60,8 @@ Return JSON with:
   "gainCreators": [
     {
       "gainId": "string",       // id of the gain this enables
-      "title": "short label",
-      "description": "how the product creates or supports this gain in clear, concrete terms. IMPORTANT: Ensure descriptions are complete sentences that fully explain the mechanism. Do not truncate or cut off mid-sentence.",
+      "title": "short label (optional, do not include 'Enables:' prefix)",
+      "description": "how the product creates or supports this gain in clear, concrete terms. Write a complete sentence explaining the mechanism. Do NOT start with 'Enables:' - that is a label, not part of the description. Ensure the description is complete and never truncated.",
       "productsUsed": ["optional list of product/service names"],
       "confidence": "high | medium | low",
       "evidenceSource": "user_input | website | research | inferred"
@@ -74,6 +76,12 @@ We are building a value mapping framework using established value proposition de
 
 SEGMENT (single, focused):
 ${canvas.segment || 'Not specified'}
+
+IMPORTANT INSTRUCTIONS:
+- Write complete, full sentences for all descriptions
+- Do NOT start descriptions with "Addresses:" or "Enables:" - these are labels we add separately
+- Do NOT truncate descriptions - write complete thoughts even if concise
+- Each description should be a standalone sentence explaining the mechanism
 
 CUSTOMER PAINS (with ids):
 ${JSON.stringify(canvas.customerPains.map(p => ({ id: p.id, text: p.text })), null, 2)}
@@ -112,18 +120,35 @@ Return JSON only in the format specified by the system prompt.`;
   try {
     const parsed = typeof response === 'string' ? JSON.parse(response) : response;
     
+    // Log for debugging - check if descriptions are complete
+    if (parsed.painRelievers) {
+      parsed.painRelievers.forEach((pr: any, idx: number) => {
+        if (pr.description && (pr.description.endsWith('...') || pr.description.length < 20)) {
+          console.warn(`Pain reliever ${idx} description may be incomplete:`, pr.description);
+        }
+      });
+    }
+    
     const painRelievers: PainReliever[] = (parsed.painRelievers || []).map((pr: any) => {
       const originalPain = canvas.customerPains.find(p => p.id === pr.painId);
+      
+      // Clean up description - remove "Addresses:" prefix if AI mistakenly included it
+      let cleanDescription = pr.description || '';
+      if (cleanDescription.trim().toLowerCase().startsWith('addresses:')) {
+        cleanDescription = cleanDescription.replace(/^addresses:\s*/i, '').trim();
+      }
+      
       // Prefer description (full explanation) over title (short label)
       // Combine title and description if both exist for better context
-      const displayText = pr.description 
-        ? (pr.title ? `${pr.title}: ${pr.description}` : pr.description)
+      const displayText = cleanDescription 
+        ? (pr.title ? `${pr.title}: ${cleanDescription}` : cleanDescription)
         : (pr.title || `Addresses: ${originalPain?.text || ''}`);
+      
       return {
         id: `reliever-${pr.painId}`,
         text: displayText,
         title: pr.title,
-        description: pr.description,
+        description: cleanDescription || pr.description,
         productsUsed: pr.productsUsed || [],
         confidence: (pr.confidence === 'high' || pr.confidence === 'medium' || pr.confidence === 'low') 
           ? pr.confidence 
@@ -135,16 +160,24 @@ Return JSON only in the format specified by the system prompt.`;
 
     const gainCreators: GainCreator[] = (parsed.gainCreators || []).map((gc: any) => {
       const originalGain = canvas.customerGains.find(g => g.id === gc.gainId);
+      
+      // Clean up description - remove "Enables:" prefix if AI mistakenly included it
+      let cleanDescription = gc.description || '';
+      if (cleanDescription.trim().toLowerCase().startsWith('enables:')) {
+        cleanDescription = cleanDescription.replace(/^enables:\s*/i, '').trim();
+      }
+      
       // Prefer description (full explanation) over title (short label)
       // Combine title and description if both exist for better context
-      const displayText = gc.description 
-        ? (gc.title ? `${gc.title}: ${gc.description}` : gc.description)
+      const displayText = cleanDescription 
+        ? (gc.title ? `${gc.title}: ${cleanDescription}` : cleanDescription)
         : (gc.title || `Enables: ${originalGain?.text || ''}`);
+      
       return {
         id: `creator-${gc.gainId}`,
         text: displayText,
         title: gc.title,
-        description: gc.description,
+        description: cleanDescription || gc.description,
         productsUsed: gc.productsUsed || [],
         confidence: (gc.confidence === 'high' || gc.confidence === 'medium' || gc.confidence === 'low') 
           ? gc.confidence 
@@ -170,7 +203,7 @@ export function generateFallbackRelieversAndCreators(canvas: ValuePropositionCan
 } {
   const painRelievers: PainReliever[] = canvas.customerPains.slice(0, 6).map((pain, idx) => ({
     id: `reliever-${idx + 1}`,
-    text: `Addresses: ${pain.text.substring(0, 50)}...`,
+    text: `Addresses: ${pain.text}`, // Don't truncate in fallback - show full text
     confidence: pain.confidence,
     painId: pain.id,
     evidenceSource: 'inferred',
