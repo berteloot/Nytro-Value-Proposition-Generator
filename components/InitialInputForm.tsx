@@ -26,6 +26,7 @@ export default function InitialInputForm({ onSubmit }: InitialInputFormProps) {
   const [useCustomSegment, setUseCustomSegment] = useState(false);
   const [productType, setProductType] = useState<'product' | 'service' | 'both' | ''>('');
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const requestInProgressRef = useRef<boolean>(false);
 
   // Fetch segment suggestions
   const fetchSegmentSuggestions = useCallback(async () => {
@@ -34,6 +35,12 @@ export default function InitialInputForm({ onSubmit }: InitialInputFormProps) {
       return;
     }
 
+    // Prevent multiple concurrent requests
+    if (requestInProgressRef.current) {
+      return;
+    }
+
+    requestInProgressRef.current = true;
     setIsLoadingSegments(true);
     try {
       // Add timeout to prevent infinite loading
@@ -68,6 +75,7 @@ export default function InitialInputForm({ onSubmit }: InitialInputFormProps) {
       setSuggestedSegments([]);
     } finally {
       setIsLoadingSegments(false);
+      requestInProgressRef.current = false;
     }
   }, [productName, description, websiteUrl]);
 
@@ -93,7 +101,8 @@ export default function InitialInputForm({ onSubmit }: InitialInputFormProps) {
         clearTimeout(debounceTimeoutRef.current);
       }
     };
-  }, [description, productName, websiteUrl, fetchSegmentSuggestions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [description, productName, websiteUrl]); // Removed fetchSegmentSuggestions from deps to prevent multiple calls
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

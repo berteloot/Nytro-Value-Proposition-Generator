@@ -28,9 +28,11 @@ export async function POST(request: NextRequest) {
     const painClusters = await identifyPainIntensityClusters(jobs, userInput);
 
     // Conduct additional research (web search, etc.)
+    // Note: conductResearch already scrapes the website internally via getWebsiteContent
     const research = await conductResearch(userInput);
 
     // Get website content for product extraction
+    // This will use the cache (instant) since conductResearch just scraped it
     const websiteContent = await getWebsiteContent(userInput);
 
     // Generate canvas using identified jobs and pain clusters

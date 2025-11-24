@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
 
     // Generate improved Pain Relievers and Gain Creators with mechanisms
     // This should happen after prioritization but before value proposition generation
+    // Note: getWebsiteContent uses caching, so this will be instant if the website was already scraped in the research step
     const websiteContent = await getWebsiteContent(userInput);
     const { painRelievers, gainCreators } = await generatePainRelieversAndGainCreators(
       canvas,

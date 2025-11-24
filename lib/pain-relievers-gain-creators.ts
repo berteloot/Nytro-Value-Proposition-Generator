@@ -108,7 +108,7 @@ Return JSON only in the format specified by the system prompt.`;
     { role: 'user', content: userPrompt }
   ], {
     temperature: 0.6,
-    maxTokens: 6000, // Increased to ensure complete descriptions aren't truncated
+    maxTokens: 8000, // Increased to ensure complete descriptions aren't truncated
     response_format: { type: 'json_object' },
   });
 
@@ -120,11 +120,16 @@ Return JSON only in the format specified by the system prompt.`;
   try {
     const parsed = typeof response === 'string' ? JSON.parse(response) : response;
     
-    // Log for debugging - check if descriptions are complete
+    // Log for debugging - check if descriptions are complete or truncated
     if (parsed.painRelievers) {
       parsed.painRelievers.forEach((pr: any, idx: number) => {
-        if (pr.description && (pr.description.endsWith('...') || pr.description.length < 20)) {
-          console.warn(`Pain reliever ${idx} description may be incomplete:`, pr.description);
+        const desc = pr.description || pr.title || '';
+        if (desc.endsWith('...') || desc.endsWith('…') || (desc.length > 0 && desc.length < 20)) {
+          console.warn(`Pain reliever ${idx} description may be incomplete:`, desc);
+        }
+        // Check if description starts with "Addresses:" which should be removed
+        if (desc.toLowerCase().startsWith('addresses:')) {
+          console.warn(`Pain reliever ${idx} description incorrectly starts with "Addresses:":`, desc);
         }
       });
     }
@@ -133,22 +138,49 @@ Return JSON only in the format specified by the system prompt.`;
       const originalPain = canvas.customerPains.find(p => p.id === pr.painId);
       
       // Clean up description - remove "Addresses:" prefix if AI mistakenly included it
-      let cleanDescription = pr.description || '';
-      if (cleanDescription.trim().toLowerCase().startsWith('addresses:')) {
+      let cleanDescription = pr.description || pr.title || '';
+      
+      // Remove "Addresses:" prefix from description if present (case-insensitive, handle variations)
+      // Also remove any trailing ellipsis that might indicate truncation
+      cleanDescription = cleanDescription
+        .replace(/^addresses:\s*/i, '')
+        .replace(/^addresses\s*/i, '')
+        .replace(/\.\.\.$/, '')
+        .replace(/…$/, '')
+        .trim();
+      
+      // Remove "Addresses:" prefix from title if present
+      let cleanTitle = pr.title ? pr.title
+        .replace(/^addresses:\s*/i, '')
+        .replace(/^addresses\s*/i, '')
+        .trim() : '';
+      
+      // If description is still empty after cleaning, use title as description
+      if (!cleanDescription && cleanTitle) {
+        cleanDescription = cleanTitle;
+        cleanTitle = '';
+      }
+      
+      // If we still don't have a description, create one from the pain text
+      // but NEVER add "Addresses:" prefix
+      if (!cleanDescription && originalPain) {
+        cleanDescription = `Helps address ${originalPain.text.toLowerCase()}`;
+      }
+      
+      // Final safety check: ensure no "Addresses:" prefix slipped through
+      if (cleanDescription.toLowerCase().startsWith('addresses:')) {
+        console.warn('Final safety check: Removing "Addresses:" prefix from pain reliever:', cleanDescription);
         cleanDescription = cleanDescription.replace(/^addresses:\s*/i, '').trim();
       }
       
-      // Prefer description (full explanation) over title (short label)
-      // Combine title and description if both exist for better context
-      const displayText = cleanDescription 
-        ? (pr.title ? `${pr.title}: ${cleanDescription}` : cleanDescription)
-        : (pr.title || `Addresses: ${originalPain?.text || ''}`);
+      // Use description as the display text (never add "Addresses:" prefix)
+      const displayText = cleanDescription;
       
       return {
         id: `reliever-${pr.painId}`,
         text: displayText,
-        title: pr.title,
-        description: cleanDescription || pr.description,
+        title: cleanTitle || undefined,
+        description: cleanDescription,
         productsUsed: pr.productsUsed || [],
         confidence: (pr.confidence === 'high' || pr.confidence === 'medium' || pr.confidence === 'low') 
           ? pr.confidence 
@@ -162,22 +194,49 @@ Return JSON only in the format specified by the system prompt.`;
       const originalGain = canvas.customerGains.find(g => g.id === gc.gainId);
       
       // Clean up description - remove "Enables:" prefix if AI mistakenly included it
-      let cleanDescription = gc.description || '';
-      if (cleanDescription.trim().toLowerCase().startsWith('enables:')) {
+      let cleanDescription = gc.description || gc.title || '';
+      
+      // Remove "Enables:" prefix from description if present (case-insensitive, handle variations)
+      // Also remove any trailing ellipsis that might indicate truncation
+      cleanDescription = cleanDescription
+        .replace(/^enables:\s*/i, '')
+        .replace(/^enables\s*/i, '')
+        .replace(/\.\.\.$/, '')
+        .replace(/…$/, '')
+        .trim();
+      
+      // Remove "Enables:" prefix from title if present
+      let cleanTitle = gc.title ? gc.title
+        .replace(/^enables:\s*/i, '')
+        .replace(/^enables\s*/i, '')
+        .trim() : '';
+      
+      // If description is still empty after cleaning, use title as description
+      if (!cleanDescription && cleanTitle) {
+        cleanDescription = cleanTitle;
+        cleanTitle = '';
+      }
+      
+      // If we still don't have a description, create one from the gain text
+      // but NEVER add "Enables:" prefix
+      if (!cleanDescription && originalGain) {
+        cleanDescription = `Helps enable ${originalGain.text.toLowerCase()}`;
+      }
+      
+      // Final safety check: ensure no "Enables:" prefix slipped through
+      if (cleanDescription.toLowerCase().startsWith('enables:')) {
+        console.warn('Final safety check: Removing "Enables:" prefix from gain creator:', cleanDescription);
         cleanDescription = cleanDescription.replace(/^enables:\s*/i, '').trim();
       }
       
-      // Prefer description (full explanation) over title (short label)
-      // Combine title and description if both exist for better context
-      const displayText = cleanDescription 
-        ? (gc.title ? `${gc.title}: ${cleanDescription}` : cleanDescription)
-        : (gc.title || `Enables: ${originalGain?.text || ''}`);
+      // Use description as the display text (never add "Enables:" prefix)
+      const displayText = cleanDescription;
       
       return {
         id: `creator-${gc.gainId}`,
         text: displayText,
-        title: gc.title,
-        description: cleanDescription || gc.description,
+        title: cleanTitle || undefined,
+        description: cleanDescription,
         productsUsed: gc.productsUsed || [],
         confidence: (gc.confidence === 'high' || gc.confidence === 'medium' || gc.confidence === 'low') 
           ? gc.confidence 
@@ -194,7 +253,7 @@ Return JSON only in the format specified by the system prompt.`;
   }
 }
 
-// NOTE: This is a last-resort fallback that creates generic "Addresses/Enables" labels
+// NOTE: This is a last-resort fallback that creates generic descriptions
 // when the AI call fails. It does NOT implement full mechanism-level detail
 // and should be replaced by AI-generated relievers/gain creators whenever possible.
 export function generateFallbackRelieversAndCreators(canvas: ValuePropositionCanvas): {
@@ -203,7 +262,8 @@ export function generateFallbackRelieversAndCreators(canvas: ValuePropositionCan
 } {
   const painRelievers: PainReliever[] = canvas.customerPains.slice(0, 6).map((pain, idx) => ({
     id: `reliever-${idx + 1}`,
-    text: `Addresses: ${pain.text}`, // Don't truncate in fallback - show full text
+    text: `Helps address ${pain.text.toLowerCase()}`, // Never use "Addresses:" prefix
+    description: `Helps address ${pain.text.toLowerCase()}`,
     confidence: pain.confidence,
     painId: pain.id,
     evidenceSource: 'inferred',
@@ -211,7 +271,8 @@ export function generateFallbackRelieversAndCreators(canvas: ValuePropositionCan
 
   const gainCreators: GainCreator[] = canvas.customerGains.slice(0, 5).map((gain, idx) => ({
     id: `creator-${idx + 1}`,
-    text: `Enables: ${gain.text}`,
+    text: `Helps enable ${gain.text.toLowerCase()}`, // Never use "Enables:" prefix
+    description: `Helps enable ${gain.text.toLowerCase()}`,
     confidence: gain.confidence,
     gainId: gain.id,
     evidenceSource: 'inferred',

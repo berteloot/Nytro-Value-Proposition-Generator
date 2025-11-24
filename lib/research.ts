@@ -129,7 +129,7 @@ export async function scrapeWebsite(url: string, maxDepth: number = 1, signal?: 
   const toVisit: Array<{ url: string; depth: number }> = [{ url, depth: 0 }];
   const allContent: string[] = [];
   const baseDomain = getBaseDomain(url);
-  const MAX_PAGES = 25; // Limit total pages to crawl
+  const MAX_PAGES = 15; // Limit total pages to crawl
   const MAX_LINKS_PER_PAGE = 10; // Limit links discovered per page
   
   console.log(`Starting website crawl for ${url} (max depth: ${maxDepth}, max pages: ${MAX_PAGES})`);
@@ -454,10 +454,8 @@ export async function conductResearch(input: UserInput): Promise<ResearchData> {
     `${input.targetDecisionMaker} pain points`,
   ];
 
-  let websiteContent = '';
-  if (input.websiteUrl) {
-    websiteContent = await scrapeWebsite(input.websiteUrl);
-  }
+  // Use getWebsiteContent which includes caching
+  const websiteContent = await getWebsiteContent(input);
 
   const searchResults = await Promise.all(
     searchQueries.map(q => performWebSearch(q))
@@ -495,14 +493,54 @@ export async function conductResearch(input: UserInput): Promise<ResearchData> {
   };
 }
 
+// Simple in-memory cache for website content (TTL: 5 minutes)
+interface CacheEntry {
+  content: string;
+  timestamp: number;
+}
+
+const websiteContentCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+function getCachedContent(url: string): string | null {
+  const entry = websiteContentCache.get(url);
+  if (entry && Date.now() - entry.timestamp < CACHE_TTL) {
+    return entry.content;
+  }
+  if (entry) {
+    // Expired entry, remove it
+    websiteContentCache.delete(url);
+  }
+  return null;
+}
+
+function setCachedContent(url: string, content: string): void {
+  websiteContentCache.set(url, {
+    content,
+    timestamp: Date.now(),
+  });
+}
+
 /**
  * Export website content for use in canvas generation
+ * Uses caching to avoid re-scraping the same URL within 5 minutes
  */
 export async function getWebsiteContent(input: UserInput, signal?: AbortSignal): Promise<string> {
-  if (input.websiteUrl) {
-    return await scrapeWebsite(input.websiteUrl, 1, signal);
+  if (!input.websiteUrl) {
+    return '';
   }
-  return '';
+
+  // Check cache first
+  const cachedContent = getCachedContent(input.websiteUrl);
+  if (cachedContent) {
+    console.log(`Using cached website content for ${input.websiteUrl}`);
+    return cachedContent;
+  }
+
+  // Scrape and cache
+  const content = await scrapeWebsite(input.websiteUrl, 1, signal);
+  setCachedContent(input.websiteUrl, content);
+  return content;
 }
 
 export async function extractWithAI(text: string, input: UserInput): Promise<ResearchData | null> {
@@ -1049,19 +1087,24 @@ export async function generateCanvas(
   // that explains concrete mechanisms for how products relieve pains and create gains, 
   // instead of simple "Addresses" / "Enables" labels.
   // Generate Pain Relievers (will be improved in separate step with mechanism)
+  // NOTE: This is a fallback stub - should use generatePainRelieversAndGainCreators() instead
   const painRelievers: PainReliever[] = customerPains.slice(0, 6).map((pain, idx) => ({
     id: `reliever-${idx + 1}`,
-    text: `Addresses: ${pain.text.substring(0, 50)}...`,
+    text: `Helps address ${pain.text.toLowerCase()}`, // Never use "Addresses:" prefix
+    description: `Helps address ${pain.text.toLowerCase()}`,
     confidence: pain.confidence,
     painId: pain.id,
+    evidenceSource: 'inferred' as const,
   }));
 
   // Generate Gain Creators (will be improved in separate step with mechanism)
   const gainCreators: GainCreator[] = customerGains.slice(0, 5).map((gain, idx) => ({
     id: `creator-${idx + 1}`,
-    text: `Enables: ${gain.text}`,
+    text: `Helps enable ${gain.text.toLowerCase()}`, // Never use "Enables:" prefix
+    description: `Helps enable ${gain.text.toLowerCase()}`,
     confidence: gain.confidence,
     gainId: gain.id,
+    evidenceSource: 'inferred' as const,
   }));
 
   return {

@@ -72,3 +72,4 @@ components/         # Client-side - NO API key access
 3. **Update the key** in your environment variables
 4. **Review code** to identify and fix the exposure point
 
+
