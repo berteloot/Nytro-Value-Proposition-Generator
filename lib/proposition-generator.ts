@@ -163,20 +163,28 @@ Your job:
   - Pain relievers / gain creators
   - Website or research snippets
 
-VALUE PROPOSITION STATEMENT FORMAT (Ad-Lib Template):
-You MUST structure the "statement" field using the ad-lib template format, adapting the prefix based on whether this is a product or service:
+VALUE PROPOSITION STATEMENT FORMAT (Flexible & Concise):
+You MUST structure the "statement" field to be concise, natural, and easy to read. Avoid wordy, overly long sentences. Use one of these flexible formats, adapting the prefix based on whether this is a product or service:
 
 FOR SERVICES/AGENCIES:
-Use natural phrasing that sounds like a service provider:
-- "[Company/Service Name] help(s) [customer segment] who want to [jobs to be done] by [verb] [gain] and want to [verb] [pain], unlike [competing value proposition]."
-- OR "We help [customer segment] who want to [jobs to be done] by [verb] [gain] and want to [verb] [pain], unlike [competing value proposition]."
+Use natural phrasing that sounds like a service provider. Choose the most concise option:
+- "[Company/Service Name] help(s) [customer segment] [verb] [job] by [verb] [pain] and [verb] [gain]."
+- OR "We help [customer segment] [verb] [job] without [pain], enabling [gain]."
+- OR "[Company/Service Name] enables [customer segment] to [verb] [job], delivering [gain] while avoiding [pain]."
 - Avoid "Our [Company Name]" for services - it sounds awkward. Use "[Company Name]" directly or "We".
 
 FOR PRODUCTS:
-Use standard product phrasing:
-- "Our [product name] help(s) [customer segment] who want to [jobs to be done] by [verb] [gain] and want to [verb] [pain], unlike [competing value proposition]."
+Use standard product phrasing. Choose the most concise option:
+- "Our [product name] help(s) [customer segment] [verb] [job] by [verb] [pain] and [verb] [gain]."
+- OR "Our [product name] enables [customer segment] to [verb] [job] without [pain], achieving [gain]."
+- OR "Our [product name] help(s) [customer segment] [verb] [job], reducing [pain] while increasing [gain]."
 
-The statement should be a single, flowing sentence that follows this ad-lib structure naturally and sounds natural for the type of offering.
+IMPORTANT GUIDELINES:
+- Keep statements concise (ideally under 30 words). Avoid wordy phrases like "who want to [job] by [verb] [gain] and want to [verb] [pain]".
+- Use active, direct verbs: "reduce downtime" not "minimize increased system downtime", "improve compliance" not "enhancing compliance reporting".
+- The competitive contrast ("unlike [alternative]") is OPTIONAL in the main statement. If included, keep it brief. The detailed contrast belongs in the "competitiveContrast" field.
+- You may use 1-2 sentences if it improves clarity and conciseness.
+- Prioritize natural, readable phrasing over rigid template adherence.
 
 OUTPUT FORMAT:
 Return JSON with:
@@ -262,11 +270,17 @@ TASK:
      * Proposition 3: Could focus on pains 1,3 and gains 1,3
    - OR vary by angle: pain-focused, gain-focused, and balanced approaches.
 3. Create meaningful differentiation between the 3 propositions - they should feel like distinct value proposition options, not just rephrased versions of the same idea.
-   - CRITICAL: The "statement" field MUST follow the ad-lib template structure, adapted for product type:
+   - CRITICAL: The "statement" field MUST be concise and natural. Use flexible phrasing options:
      ${productType === 'service' ? 'For services: "[Company Name] help(s)..." or "We help..." (NOT "Our [Company Name] helps...")' : 'For products: "Our [product name] help(s)..."'}
-     Full structure: "[prefix] help(s) [customer segment] who want to [jobs to be done] by [verb] [gain] and want to [verb] [pain], unlike [competing value proposition]."
-   - Use appropriate verbs: for gains use "increasing," "enabling," "creating," "supporting"; for pains use "reducing," "avoiding," "eliminating," "minimizing."
-   - Make it a single, natural-flowing sentence that reads smoothly and sounds natural for a ${productType === 'service' ? 'service provider' : 'product'}.
+     Preferred concise formats:
+     * "[prefix] help(s) [segment] [verb] [job] by [verb] [pain] and [verb] [gain]."
+     * "[prefix] enables [segment] to [verb] [job] without [pain], achieving [gain]."
+     * "[prefix] help(s) [segment] [verb] [job], reducing [pain] while increasing [gain]."
+   - Use concise, active verbs: "reduce" not "minimize", "improve" not "enhancing", "avoid" not "avoiding", "enable" not "enabling".
+   - Keep statements under 30 words when possible. Avoid wordy phrases like "who want to [job] by [verb] [gain] and want to [verb] [pain]".
+   - Competitive contrast ("unlike [alternative]") is OPTIONAL in the statement. If included, keep it brief. Detailed contrast goes in the "competitiveContrast" field.
+   - You may use 1-2 sentences if it improves clarity and conciseness.
+   - Prioritize natural, readable phrasing that sounds conversational, not template-driven.
 3. For "measurableImpact":
    - If explicit metrics are provided in the input (e.g. "reduced CSF leak rate from X to Y"), you may restate them.
    - If no explicit metrics are provided, write a qualitative description and explicitly mark it as qualitative (e.g. "Qualitative: designed to help reduce post-operative complications and support faster recovery.").
@@ -385,12 +399,12 @@ export function generateFallbackPropositions(
   const verbForm = getVerbAgreement(statementPrefix, productService);
 
   // Proposition 1: Pain-focused (uses job 1, pain 1, gain 1)
-  const painVerb = 'reducing';
-  const gainVerb = 'enabling';
+  const painVerb = 'reduce';
+  const gainVerb = 'enable';
   propositions.push({
     id: 'prop-1',
     label: 'Pain-focused value proposition',
-    statement: `${statementPrefix} ${verbForm} ${segment.toLowerCase()} who want to ${mainJob.text.toLowerCase()} by ${gainVerb} ${prioritizedGains[0].text.toLowerCase()} and want to ${painVerb} ${prioritizedPains[0].text.toLowerCase()}, unlike ${alternative}.`,
+    statement: `${statementPrefix} ${verbForm} ${segment.toLowerCase()} ${mainJob.text.toLowerCase()} by ${painVerb}ing ${prioritizedPains[0].text.toLowerCase()} and ${gainVerb}ing ${prioritizedGains[0].text.toLowerCase()}.`,
     segmentTargeted: segment,
     primaryJob: mainJob.text,
     coreOutcome: prioritizedGains[0].text,
@@ -405,12 +419,12 @@ export function generateFallbackPropositions(
   });
 
   // Proposition 2: Gain-focused (uses job 2 if available, pain 2, gain 2)
-  const gainVerb2 = 'creating';
-  const painVerb2 = 'avoiding';
+  const gainVerb2 = 'create';
+  const painVerb2 = 'avoid';
   propositions.push({
     id: 'prop-2',
     label: 'Gain-focused value proposition',
-    statement: `${statementPrefix} ${verbForm} ${segment.toLowerCase()} who want to ${job2.text.toLowerCase()} by ${gainVerb2} ${prioritizedGains[1].text.toLowerCase()} and want to ${painVerb2} ${prioritizedPains[1].text.toLowerCase()}, unlike ${alternative}.`,
+    statement: `${statementPrefix} ${verbForm} ${segment.toLowerCase()} ${job2.text.toLowerCase()} without ${prioritizedPains[1].text.toLowerCase()}, ${gainVerb2}ing ${prioritizedGains[1].text.toLowerCase()}.`,
     segmentTargeted: segment,
     primaryJob: job2.text,
     coreOutcome: prioritizedGains[1].text,
@@ -425,12 +439,12 @@ export function generateFallbackPropositions(
   });
 
   // Proposition 3: Balanced (uses job 3 if available, pain 3, gain 3)
-  const gainVerb3 = 'supporting';
-  const painVerb3 = 'minimizing';
+  const gainVerb3 = 'support';
+  const painVerb3 = 'minimize';
   propositions.push({
     id: 'prop-3',
     label: 'Balanced value proposition',
-    statement: `${statementPrefix} ${verbForm} ${segment.toLowerCase()} who want to ${job3.text.toLowerCase()} by ${gainVerb3} ${prioritizedGains[2].text.toLowerCase()} and want to ${painVerb3} ${prioritizedPains[2].text.toLowerCase()}, unlike ${alternative}.`,
+    statement: `${statementPrefix} ${verbForm} ${segment.toLowerCase()} ${job3.text.toLowerCase()}, ${painVerb3}ing ${prioritizedPains[2].text.toLowerCase()} while ${gainVerb3}ing ${prioritizedGains[2].text.toLowerCase()}.`,
     segmentTargeted: segment,
     primaryJob: job3.text,
     coreOutcome: `${prioritizedGains[0].text} and ${prioritizedGains[1].text}`,
