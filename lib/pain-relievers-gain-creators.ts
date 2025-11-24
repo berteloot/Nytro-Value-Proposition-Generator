@@ -19,9 +19,10 @@ GLOBAL RULES:
 5) Emotional language must NOT appear in Jobs. Emotional concerns belong in Pains.
 
 PAIN RELIEVERS AND GAIN CREATORS (must explain HOW):
-- Must clearly describe HOW product features reduce a pain or create a gain.
+- Must clearly describe HOW product features reduce a pain or create a gain FOR THE SPECIFIC SEGMENT.
 - Must reference mechanisms, not repeat benefits.
   Example: "Automated validation rules prevent incorrect submissions before approval," NOT "Reduces errors."
+- Must be segment-specific: Consider how THIS segment works, their industry context, role, and unique challenges.
 - If mechanisms are unknown, use phrasing like "is designed to help" or "supports" without inventing capabilities.
 - Only use capabilities that are clearly implied by:
   - Products & services provided by the user
@@ -33,11 +34,12 @@ PAIN RELIEVERS AND GAIN CREATORS (must explain HOW):
   - "supports"
   - "can help reduce"
   - "may contribute to"
-- If a pain or gain cannot reasonably be influenced by the product, either:
+- If a pain or gain cannot reasonably be influenced by the product FOR THIS SEGMENT, either:
   - omit it, or
   - mark it as low-confidence and explain why.
 - CRITICAL: Do NOT start descriptions with "Addresses:" or "Enables:" - these are labels, not part of the description text.
 - CRITICAL: Write complete, full sentences. Never truncate or cut off mid-sentence.
+- CRITICAL: All pain relievers and gain creators must be relevant to the specific segment's context, jobs, and needs.
 
 FORMAT RULES:
 - Use concise, precise language. Avoid hype, clichés, and slogans.
@@ -74,8 +76,29 @@ IMPORTANT: All descriptions must be complete, full sentences. Never truncate des
   const userPrompt = `CONTEXT:
 We are building a value mapping framework using established value proposition design principles.
 
-SEGMENT (single, focused):
+CRITICAL - SEGMENT CONTEXT (all pain relievers and gain creators must be tailored to this specific segment):
 ${canvas.segment || 'Not specified'}
+
+This segment's context matters because:
+- Pain relievers must address pains that THIS segment experiences
+- Gain creators must create gains that THIS segment values
+- The mechanisms must be relevant to how THIS segment works
+- Consider the segment's industry, role, and unique challenges when explaining how products help
+
+CUSTOMER JOBS (context for understanding what this segment is trying to accomplish):
+${JSON.stringify(canvas.customerJobs.map(j => ({ id: j.id, text: j.text, type: j.type })), null, 2)}
+
+CUSTOMER PAINS (with ids) - these are the specific pains experienced by ${canvas.segment || 'this segment'}:
+${JSON.stringify(canvas.customerPains.map(p => ({ id: p.id, text: p.text, intensity: p.intensity })), null, 2)}
+
+CUSTOMER GAINS (with ids) - these are the specific gains desired by ${canvas.segment || 'this segment'}:
+${JSON.stringify(canvas.customerGains.map(g => ({ id: g.id, text: g.text, type: g.type })), null, 2)}
+
+PRODUCTS & SERVICES:
+${JSON.stringify(canvas.productsServices.map(p => ({ id: p.id, text: p.text })), null, 2)}
+
+WEBSITE / RESEARCH SNIPPETS (context about how the company/product addresses this segment):
+${researchSnippets ? researchSnippets.substring(0, 5000) : 'None provided'}
 
 IMPORTANT INSTRUCTIONS:
 - Write complete, full sentences for all descriptions
@@ -83,23 +106,13 @@ IMPORTANT INSTRUCTIONS:
 - Do NOT truncate descriptions - write complete thoughts even if concise
 - Each description should be a standalone sentence explaining the mechanism
 
-CUSTOMER PAINS (with ids):
-${JSON.stringify(canvas.customerPains.map(p => ({ id: p.id, text: p.text })), null, 2)}
-
-CUSTOMER GAINS (with ids):
-${JSON.stringify(canvas.customerGains.map(g => ({ id: g.id, text: g.text })), null, 2)}
-
-PRODUCTS & SERVICES:
-${JSON.stringify(canvas.productsServices.map(p => ({ id: p.id, text: p.text })), null, 2)}
-
-WEBSITE / RESEARCH SNIPPETS (optional):
-${researchSnippets ? researchSnippets.substring(0, 5000) : 'None provided'}
-
 TASK:
-1. For each pain that the products can realistically influence, propose 1–2 concrete Pain Relievers.
-2. For each gain that the products can realistically influence, propose 1–2 concrete Gain Creators.
-3. Be specific about HOW the product helps, not just "addresses this pain".
+1. For each pain that the products can realistically influence FOR THIS SEGMENT, propose 1–2 concrete Pain Relievers.
+2. For each gain that the products can realistically influence FOR THIS SEGMENT, propose 1–2 concrete Gain Creators.
+3. Be specific about HOW the product helps THIS SEGMENT, considering their unique context and needs.
 4. Use conservative, compliant language and do not invent capabilities or quantitative claims that are not supported.
+5. Consider the segment's jobs, industry context, and role when explaining mechanisms.
+6. Reference how the product features align with what ${canvas.segment || 'this segment'} needs based on their jobs and context.
 
 Return JSON only in the format specified by the system prompt.`;
 

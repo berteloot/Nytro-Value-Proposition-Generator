@@ -668,10 +668,15 @@ function extractAlternatives(text: string, input: UserInput): string[] {
 export async function generateCustomerGains(
   input: UserInput,
   jobs?: JobToBeDone[],
-  painClusters?: PainIntensityCluster[]
+  painClusters?: PainIntensityCluster[],
+  websiteContent?: string,
+  researchData?: ResearchData
 ): Promise<CustomerGain[]> {
   // Extract key information from description without using the full text
   const descriptionSummary = input.description.split(/[.!?]/)[0].substring(0, 100) || input.description.substring(0, 100);
+  
+  // Get segment context
+  const segment = input.primarySegment || input.targetDecisionMaker || 'target customers';
   
   const systemPrompt = `You are a senior strategist implementing a value mapping framework, and you must apply these rules to ANY industry (e.g., SaaS, healthcare, logistics, industrials, finance, consulting, manufacturing, hardware, education, cybersecurity, biotech, energy, HR tech).
 
@@ -695,6 +700,12 @@ CUSTOMER GAINS (outcomes, efficiency, recognition):
 - Avoid vague gains like "increase efficiency" without specifying the context.
 - RULE: Gains should be noun-based outcomes, not verbs. Examples: "Reduced neurosurgical procedure errors" (good), "Reduce neurosurgical procedure errors" (bad - verb-based).
 
+SEGMENT-SPECIFIC GAINS:
+- Gains must be relevant to the specific customer segment provided
+- Consider the segment's unique context, industry, role, and challenges
+- Gains should reflect outcomes that matter to THIS specific segment, not generic benefits
+- Use the segment's jobs, pains, and context to identify what gains would be most valuable to them
+
 Return a JSON array with this structure:
 [
   {
@@ -706,20 +717,36 @@ Return a JSON array with this structure:
 
 Return ONLY valid JSON array, no markdown formatting.`;
 
-  const prompt = `Based on the following product, identify 5-6 customer gains (benefits/outcomes).
+  const prompt = `Based on the following product and customer segment, identify 5-6 customer gains (benefits/outcomes).
+
+CUSTOMER SEGMENT (CRITICAL - tailor gains to this specific segment):
+${segment}
 
 Product Name: ${input.productName}
 What it does: ${descriptionSummary}
 
+${jobs && jobs.length > 0 ? `CUSTOMER JOBS (context for what this segment is trying to accomplish):
+${JSON.stringify(jobs.map(j => j.text), null, 2)}` : ''}
+
+${websiteContent ? `WEBSITE CONTEXT (how the company positions itself):
+${websiteContent.substring(0, 2000)}` : ''}
+
+${researchData?.typicalPains && researchData.typicalPains.length > 0 ? `RESEARCH INSIGHTS - Common Pains in this Segment:
+${JSON.stringify(researchData.typicalPains.slice(0, 5), null, 2)}
+
+Use these pains to understand what gains would be most valuable to ${segment}.` : ''}
+
 Generate customer gains that are:
+- Segment-specific: Relevant to ${segment} and their unique context
 - Short and specific (5-12 words each)
-- Outcome-focused (what customers achieve as a result)
+- Outcome-focused (what ${segment} achieves as a result)
 - NOUN-BASED outcomes, not verb-based actions
-- Relevant to this product type
+- Relevant to this product type AND this specific segment
 - NOT a description of the product itself
 - Examples of good gains (noun-based outcomes): "Reduced order processing errors", "Shorter onboarding time for new hires", "Fewer neurosurgical procedure errors"
 - Examples of BAD gains (verb-based actions): "Reduce order processing errors", "Accelerate patient recovery times", "Enhance surgical precision", "Increase efficiency" (too vague)
 - RULE: Rewrite any verb-based gain into a noun-based outcome. "Accelerate X" → "Shorter X", "Enhance X" → "More consistent X", "Reduce X" → "Reduced X" or "Fewer X"
+- Consider what outcomes would be most valuable to ${segment} based on their jobs and context
 
 Return ONLY valid JSON array, no markdown formatting.`;
 
@@ -1072,7 +1099,7 @@ export async function generateCanvas(
   });
 
   // Generate Customer Gains - use AI to create contextually relevant gains
-  const customerGains: CustomerGain[] = await generateCustomerGains(input, jobs, painClusters);
+  const customerGains: CustomerGain[] = await generateCustomerGains(input, jobs, painClusters, websiteContent, research);
 
   // Generate Products/Services - extract specific products from website/research
   const productsServices: ProductService[] = await generateProductsServices(input, websiteContent);

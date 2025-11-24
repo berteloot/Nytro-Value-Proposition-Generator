@@ -211,7 +211,7 @@ export async function runValuePropFlow(userInput: UserInput): Promise<ValuePropF
     }
 
     // 4. Gains
-    const customerGains = await generateCustomerGains(userInput, jobs, painClusters);
+    const customerGains = await generateCustomerGains(userInput, jobs, painClusters, websiteContent, research);
   
     // Ensure we have at least 3 gains
     if (customerGains.length < 3) {
