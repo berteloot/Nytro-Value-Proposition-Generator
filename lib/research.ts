@@ -123,16 +123,24 @@ function normalizeUrl(url: string, baseUrl: string): string | null {
  * Crawls internal links to gather comprehensive content
  * Limited to 2-page depth: homepage (depth 0) + pages linked from homepage (depth 1)
  */
-export async function scrapeWebsite(url: string, maxDepth: number = 1): Promise<string> {
+export async function scrapeWebsite(url: string, maxDepth: number = 1, signal?: AbortSignal): Promise<string> {
   const visited = new Set<string>();
   const urlDepths = new Map<string, number>(); // Track depth of each URL
   const toVisit: Array<{ url: string; depth: number }> = [{ url, depth: 0 }];
   const allContent: string[] = [];
   const baseDomain = getBaseDomain(url);
+  const MAX_PAGES = 25; // Limit total pages to crawl
+  const MAX_LINKS_PER_PAGE = 10; // Limit links discovered per page
   
-  console.log(`Starting website crawl for ${url} (max depth: ${maxDepth})`);
+  console.log(`Starting website crawl for ${url} (max depth: ${maxDepth}, max pages: ${MAX_PAGES})`);
   
-  while (toVisit.length > 0) {
+  while (toVisit.length > 0 && visited.size < MAX_PAGES) {
+    // Check if cancelled
+    if (signal?.aborted) {
+      console.log('Crawl cancelled via AbortSignal');
+      break;
+    }
+    
     const current = toVisit.shift();
     
     if (!current) continue;
@@ -142,6 +150,12 @@ export async function scrapeWebsite(url: string, maxDepth: number = 1): Promise<
     // Skip if already visited or exceeds max depth
     if (visited.has(currentUrl) || depth > maxDepth) {
       continue;
+    }
+    
+    // Stop if we've reached max pages
+    if (visited.size >= MAX_PAGES) {
+      console.log(`Reached maximum page limit (${MAX_PAGES}), stopping crawl`);
+      break;
     }
     
     visited.add(currentUrl);
@@ -154,7 +168,8 @@ export async function scrapeWebsite(url: string, maxDepth: number = 1): Promise<
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
-        timeout: 10000,
+        timeout: 8000, // Reduced timeout
+        signal, // Support AbortSignal
       });
       
       // Extract content and discover links in one pass
@@ -165,9 +180,17 @@ export async function scrapeWebsite(url: string, maxDepth: number = 1): Promise<
       }
       
       // Only discover links if we haven't reached max depth
-      if (depth < maxDepth) {
+      if (depth < maxDepth && visited.size < MAX_PAGES) {
+        // Limit the number of links we process per page
+        const linksToProcess = links.slice(0, MAX_LINKS_PER_PAGE);
+        
         // Add new links to visit queue (only at next depth level)
-        for (const link of links) {
+        for (const link of linksToProcess) {
+          // Stop if we've reached max pages
+          if (visited.size >= MAX_PAGES || toVisit.length >= MAX_PAGES) {
+            break;
+          }
+          
           if (!visited.has(link) && !toVisit.some(item => item.url === link)) {
             // Prioritize important pages (about, features, pricing, product, solution, etc.)
             const importantKeywords = ['about', 'features', 'pricing', 'product', 'solution', 'how-it-works', 'benefits', 'use-cases'];
@@ -188,10 +211,13 @@ export async function scrapeWebsite(url: string, maxDepth: number = 1): Promise<
       }
       
       // Small delay to be respectful
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300)); // Reduced delay
       
-    } catch (error) {
-      console.error(`Error processing ${currentUrl}:`, error);
+    } catch (error: any) {
+      // Don't log AbortError as it's expected when cancelled
+      if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
+        console.error(`Error processing ${currentUrl}:`, error);
+      }
       continue;
     }
   }
@@ -472,9 +498,9 @@ export async function conductResearch(input: UserInput): Promise<ResearchData> {
 /**
  * Export website content for use in canvas generation
  */
-export async function getWebsiteContent(input: UserInput): Promise<string> {
+export async function getWebsiteContent(input: UserInput, signal?: AbortSignal): Promise<string> {
   if (input.websiteUrl) {
-    return await scrapeWebsite(input.websiteUrl);
+    return await scrapeWebsite(input.websiteUrl, 1, signal);
   }
   return '';
 }

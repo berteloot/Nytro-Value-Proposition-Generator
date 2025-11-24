@@ -34,16 +34,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get website content if provided (with timeout)
+    // Get website content if provided (with timeout and cancellation)
     let websiteContent = '';
     if (websiteUrl) {
       try {
-        // Add timeout to prevent hanging
-        const websiteContentPromise = getWebsiteContent({ websiteUrl } as any);
-        const timeoutPromise = new Promise<string>((_, reject) => 
-          setTimeout(() => reject(new Error('Website fetch timeout')), 10000) // 10 second timeout
-        );
-        websiteContent = await Promise.race([websiteContentPromise, timeoutPromise]);
+        // Use AbortController to actually cancel the crawl on timeout
+        const abortController = new AbortController();
+        const timeoutId = setTimeout(() => {
+          abortController.abort();
+          console.warn('Website fetch timeout - cancelling crawl');
+        }, 10000); // 10 second timeout
+        
+        try {
+          websiteContent = await getWebsiteContent({ websiteUrl } as any, abortController.signal);
+          clearTimeout(timeoutId);
+        } catch (error: any) {
+          clearTimeout(timeoutId);
+          if (error.name === 'AbortError' || error.name === 'CanceledError') {
+            console.warn('Website fetch cancelled due to timeout');
+          } else {
+            throw error;
+          }
+        }
       } catch (error) {
         console.warn('Failed to fetch website content:', error);
         // Continue without website content
