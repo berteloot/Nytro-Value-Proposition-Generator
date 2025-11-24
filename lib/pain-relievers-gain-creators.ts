@@ -49,7 +49,7 @@ Return JSON with:
     {
       "painId": "string",       // id of the pain this addresses
       "title": "short label",
-      "description": "how the product relieves this pain in clear, concrete terms",
+      "description": "how the product relieves this pain in clear, concrete terms. IMPORTANT: Ensure descriptions are complete sentences that fully explain the mechanism. Do not truncate or cut off mid-sentence.",
       "productsUsed": ["optional list of product/service names"],
       "confidence": "high | medium | low",
       "evidenceSource": "user_input | website | research | inferred"
@@ -59,13 +59,15 @@ Return JSON with:
     {
       "gainId": "string",       // id of the gain this enables
       "title": "short label",
-      "description": "how the product creates or supports this gain in clear, concrete terms",
+      "description": "how the product creates or supports this gain in clear, concrete terms. IMPORTANT: Ensure descriptions are complete sentences that fully explain the mechanism. Do not truncate or cut off mid-sentence.",
       "productsUsed": ["optional list of product/service names"],
       "confidence": "high | medium | low",
       "evidenceSource": "user_input | website | research | inferred"
     }
   ]
-}`;
+}
+
+IMPORTANT: All descriptions must be complete, full sentences. Never truncate descriptions mid-sentence. If you need to be concise, write shorter but complete sentences.`;
 
   const userPrompt = `CONTEXT:
 We are building a value mapping framework using established value proposition design principles.
@@ -98,7 +100,7 @@ Return JSON only in the format specified by the system prompt.`;
     { role: 'user', content: userPrompt }
   ], {
     temperature: 0.6,
-    maxTokens: 4000,
+    maxTokens: 6000, // Increased to ensure complete descriptions aren't truncated
     response_format: { type: 'json_object' },
   });
 
@@ -112,9 +114,14 @@ Return JSON only in the format specified by the system prompt.`;
     
     const painRelievers: PainReliever[] = (parsed.painRelievers || []).map((pr: any) => {
       const originalPain = canvas.customerPains.find(p => p.id === pr.painId);
+      // Prefer description (full explanation) over title (short label)
+      // Combine title and description if both exist for better context
+      const displayText = pr.description 
+        ? (pr.title ? `${pr.title}: ${pr.description}` : pr.description)
+        : (pr.title || `Addresses: ${originalPain?.text || ''}`);
       return {
         id: `reliever-${pr.painId}`,
-        text: pr.title || pr.description || `Addresses: ${originalPain?.text || ''}`,
+        text: displayText,
         title: pr.title,
         description: pr.description,
         productsUsed: pr.productsUsed || [],
@@ -128,9 +135,14 @@ Return JSON only in the format specified by the system prompt.`;
 
     const gainCreators: GainCreator[] = (parsed.gainCreators || []).map((gc: any) => {
       const originalGain = canvas.customerGains.find(g => g.id === gc.gainId);
+      // Prefer description (full explanation) over title (short label)
+      // Combine title and description if both exist for better context
+      const displayText = gc.description 
+        ? (gc.title ? `${gc.title}: ${gc.description}` : gc.description)
+        : (gc.title || `Enables: ${originalGain?.text || ''}`);
       return {
         id: `creator-${gc.gainId}`,
-        text: gc.title || gc.description || `Enables: ${originalGain?.text || ''}`,
+        text: displayText,
         title: gc.title,
         description: gc.description,
         productsUsed: gc.productsUsed || [],
