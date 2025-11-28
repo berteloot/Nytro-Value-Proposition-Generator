@@ -4,6 +4,19 @@ import { generatePainRelieversAndGainCreators } from '@/lib/pain-relievers-gain-
 import { ValuePropositionCanvas, UserInput } from '@/types';
 import { getWebsiteContent } from '@/lib/research';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders,
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -12,7 +25,7 @@ export async function POST(request: NextRequest) {
     if (!canvas || !userInput) {
       return NextResponse.json(
         { error: 'Missing canvas or userInput' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -23,7 +36,7 @@ export async function POST(request: NextRequest) {
     if (prioritizedPains.length < 3 || prioritizedGains.length < 3) {
       return NextResponse.json(
         { error: 'Must prioritize exactly 3 pains and 3 gains before generating propositions' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -49,14 +62,14 @@ export async function POST(request: NextRequest) {
       success: true,
       propositions,
       canvas: updatedCanvas, // Return updated canvas with improved Pain Relievers/Gain Creators
-    });
+    }, { headers: corsHeaders });
   } catch (error: any) {
     // Log full error server-side only (may contain sensitive details)
     console.error('Generate propositions API error:', error);
     // Return generic error message to client (never expose API keys or sensitive details)
     return NextResponse.json(
       { error: 'Failed to generate value propositions. Please try again.' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }

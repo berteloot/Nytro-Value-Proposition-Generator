@@ -8,6 +8,19 @@ import {
 } from '@/lib/research';
 import { UserInput } from '@/types';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders,
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -17,7 +30,7 @@ export async function POST(request: NextRequest) {
     if (!userInput.productName || !userInput.description || !userInput.targetDecisionMaker) {
       return NextResponse.json(
         { error: 'Missing required fields' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -44,12 +57,12 @@ export async function POST(request: NextRequest) {
       canvas,
       jobs, // Include jobs for debugging/display
       painClusters, // Include pain clusters for debugging/display
-    });
+    }, { headers: corsHeaders });
   } catch (error) {
     console.error('Research API error:', error);
     return NextResponse.json(
       { error: 'Failed to conduct research' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }

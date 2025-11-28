@@ -21,6 +21,19 @@ interface SuggestedSegment {
   confidence: 'high' | 'medium' | 'low';
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders,
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body: SuggestSegmentsRequest = await request.json();
@@ -30,7 +43,7 @@ export async function POST(request: NextRequest) {
     if (!productName || !productDescription) {
       return NextResponse.json(
         { error: 'Missing required fields: productName and productDescription' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -132,7 +145,7 @@ Generate 3-6 customer segments for this product.`;
             confidence: 'medium' as const,
           },
         ],
-      });
+      }, { headers: corsHeaders });
     }
 
     // Parse the response
@@ -143,7 +156,7 @@ Generate 3-6 customer segments for this product.`;
       console.error('Failed to parse OpenAI response:', error);
       return NextResponse.json(
         { error: 'Invalid response format from AI' },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -181,15 +194,15 @@ Generate 3-6 customer segments for this product.`;
             confidence: 'medium' as const,
           },
         ],
-      });
+      }, { headers: corsHeaders });
     }
 
-    return NextResponse.json({ segments });
+    return NextResponse.json({ segments }, { headers: corsHeaders });
   } catch (error) {
     console.error('Suggest segments API error:', error);
     return NextResponse.json(
       { error: 'Failed to suggest segments' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }

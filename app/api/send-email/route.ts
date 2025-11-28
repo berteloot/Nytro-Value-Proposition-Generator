@@ -287,19 +287,32 @@ function formatEmailContent(
   return html;
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders,
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     if (!process.env.SENDGRID_API_KEY) {
       return NextResponse.json(
         { error: 'SendGrid API key not configured' },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
     if (!process.env.SENDGRID_FROM_EMAIL) {
       return NextResponse.json(
         { error: 'SendGrid from email not configured' },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -309,7 +322,7 @@ export async function POST(request: NextRequest) {
     if (!toEmail || !toEmail.includes('@')) {
       return NextResponse.json(
         { error: 'Valid email address is required' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -342,14 +355,14 @@ export async function POST(request: NextRequest) {
       message: 'Email sent successfully',
       hubspotLeadCreated: hubspotResult.success,
       hubspotError: hubspotResult.success ? undefined : hubspotResult.error,
-    });
+    }, { headers: corsHeaders });
   } catch (error: any) {
     // Log full error server-side only (may contain sensitive details)
     console.error('SendGrid error:', error);
     // Return generic error message to client (never expose API keys or sensitive details)
     return NextResponse.json(
       { error: 'Failed to send email. Please try again later.' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
